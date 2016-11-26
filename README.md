@@ -14,7 +14,7 @@ go get -u github.com/go-http-utils/compress
 
 API documentation can be found here: https://godoc.org/github.com/go-http-utils/compress
 
-## go
+## Usage
 
 ```go
 import (
