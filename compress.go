@@ -12,7 +12,7 @@ import (
 )
 
 // Version is this package's version.
-const Version = "0.0.1"
+const Version = "0.1.0"
 
 type compressWriter struct {
 	rw http.ResponseWriter
@@ -40,8 +40,8 @@ func Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		var w io.WriteCloser
 
-		if req.Method != http.MethodHead ||
-			res.Header().Get(headers.ContentEncoding) == "" ||
+		if req.Method != http.MethodHead &&
+			res.Header().Get(headers.ContentEncoding) == "" &&
 			compressible.Test(req.Header.Get(headers.ContentType)) {
 			n := negotiator.New(req)
 			encoding, matched := n.Encoding([]string{"gzip", "deflate"})
@@ -59,11 +59,14 @@ func Handler(h http.Handler) http.Handler {
 				w, _ = flate.NewWriter(res, flate.DefaultCompression)
 			}
 
-			res.Header().Set(headers.ContentEncoding, encoding)
+			cw := compressWriter{rw: res, w: w}
 
-			defer w.Close()
+			cw.Header().Set(headers.ContentEncoding, encoding)
+			cw.Header().Set(headers.Vary, headers.AcceptEncoding)
 
-			h.ServeHTTP(compressWriter{rw: res, w: w}, req)
+			defer cw.w.Close()
+
+			h.ServeHTTP(cw, req)
 			return
 		}
 
